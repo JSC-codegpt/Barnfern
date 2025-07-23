@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Barnsley Fern Generator</title>
+    <style>
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        canvas {
+            background: #000;
+            border: 1px solid #0f0;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            max-width: 90vw;
+            margin: 10px 0;
+        }
+        .control {
+            display: flex;
+            flex-direction: column;
+            background: #111;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        label {
+            font-size: 12px;
+        }
+        input[type=range] {
+            width: 100%;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 5px;
+            margin-top: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #3f3;
+        }
+        #resetAll {
+            margin: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 8px 16px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Barnsley Fern Generator 🌿</h2>
+    <canvas id="fernCanvas" width="400" height="600"></canvas>
+
+    <div class="controls" id="sliders"></div>
+
+    <button id="resetAll">🌿 Reset All</button>
+
+    <script>
+        const canvas = document.getElementById('fernCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Default parameters for Barnsley Fern
+        const defaultParams = [
+            {a: 0,    b: 0,    c: 0,    d: 0.16, e: 0,    f: 0,    p: 1},   // Stem
+            {a: 0.85, b: 0.04, c:-0.04, d: 0.85, e: 0,    f: 1.6,  p: 85},  // Successive leaflets
+            {a: 0.2,  b:-0.26, c: 0.23, d: 0.22, e: 0,    f: 1.6,  p: 7},   // Left leaflet
+            {a:-0.15, b: 0.28, c: 0.26, d: 0.24, e: 0,    f: 0.44, p: 7}    // Right leaflet
+        ];
+
+        // Copy defaults into working params
+        const params = JSON.parse(JSON.stringify(defaultParams));
+
+        const sliderContainer = document.getElementById('sliders');
+
+        // Create sliders + reset buttons
+        params.forEach((transform, i) => {
+            const keys = ['a', 'b', 'c', 'd', 'e', 'f', 'p'];
+            keys.forEach(key => {
+                const div = document.createElement('div');
+                div.className = 'control';
+                const label = document.createElement('label');
+                label.textContent = `f${i+1} ${key}`;
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.min = key === 'p' ? 0 : -1;
+                slider.max = key === 'p' ? 100 : 1;
+                slider.step = key === 'p' ? 1 : 0.01;
+                slider.value = transform[key];
+                slider.oninput = () => {
+                    transform[key] = parseFloat(slider.value);
+                    drawFern();
+                };
+                div.appendChild(label);
+                div.appendChild(slider);
+                sliderContainer.appendChild(div);
+            });
+
+            // Add Reset button for each function
+            const resetButton = document.createElement('button');
+            resetButton.textContent = `Reset f${i+1}`;
+            resetButton.onclick = () => {
+                Object.assign(params[i], defaultParams[i]); // reset params
+                updateSliders(i); // update sliders to match
+                drawFern();
+            };
+            sliderContainer.appendChild(resetButton);
+        });
+
+        // Reset All button
+        document.getElementById('resetAll').onclick = () => {
+            for (let i = 0; i < params.length; i++) {
+                Object.assign(params[i], defaultParams[i]); // reset params
+                updateSliders(i); // update sliders for each
+            }
+            drawFern();
+        };
+
+        // Update sliders to match parameters
+        function updateSliders(transformIndex) {
+            const controls = sliderContainer.querySelectorAll('.control');
+            const keys = ['a', 'b', 'c', 'd', 'e', 'f', 'p'];
+            keys.forEach((key, keyIndex) => {
+                const slider = controls[transformIndex * 7 + keyIndex].querySelector('input');
+                slider.value = params[transformIndex][key];
+            });
+        }
+
+        function drawFern() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, width, height);
+
+            let x = 0, y = 0;
+            ctx.fillStyle = 'lime';
+
+            for (let i = 0; i < 50000; i++) {
+                const r = Math.random() * 100;
+                let t;
+                let cumulativeP = 0;
+                for (t = 0; t < params.length; t++) {
+                    cumulativeP += params[t].p;
+                    if (r <= cumulativeP) break;
+                }
+
+                const {a, b, c, d, e, f} = params[t];
+                const newX = a * x + b * y + e;
+                const newY = c * x + d * y + f;
+                x = newX;
+                y = newY;
+
+                const px = width / 2 + x * 50;
+                const py = height - y * 50;
+                ctx.fillRect(px, py, 1, 1);
+            }
+        }
+
+        drawFern();
+    </script>
+</body>
+</html>
